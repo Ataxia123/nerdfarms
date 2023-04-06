@@ -44,6 +44,7 @@ export const useScaffoldEventHistory = <
 
   const contract = useContract({
     address: deployedContractData?.address,
+    // @ts-ignore
     abi: deployedContractData?.abi,
     signerOrProvider: provider,
   });

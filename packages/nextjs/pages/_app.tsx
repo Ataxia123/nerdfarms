@@ -16,7 +16,7 @@ import "~~/styles/globals.css";
 
 const ScaffoldEthApp = ({ Component, pageProps }: AppProps) => {
   const price = useEthPrice();
-  const setEthPrice = useAppStore(state => state.setEthPrice);
+  const setEthPrice = useAppStore(state => state.ethPriceSlice.setEthPrice);
 
   useEffect(() => {
     if (price > 0) {
