@@ -10,9 +10,9 @@ const PositionManager = (props: any) => {
 
   //parse pending reward into number with 18 decimals
 
-  const liquidityPool = pool.data ? pool.data.liquidity.toString() : "notFound";
+  const liquidityPool = pool ? pool.toString() : "notFound";
 
-  const parsedPendingReward = pendingReward.data ? ethers.utils.formatUnits(pendingReward.data, 18) : "notFound";
+  const parsedPendingReward = pendingReward > 0 ? ethers.utils.formatUnits(pendingReward, 18) : "notFound";
 
   console.log("POSITIONMANAGER", positionId, position);
 
@@ -28,9 +28,9 @@ const PositionManager = (props: any) => {
     <div>
       <h1>Position Manager</h1>
       <p>Position ID: {positionId}</p>
-      <p>Position: {position.data ? position.data.toString() : "notFound"}</p>
+      <p>Position: {position ? position.toString() : "notFound"}</p>
       <p>Liquidity Pool: {liquidityPool}</p>
-      <p>Pending Reward: {pendingReward.data ? parsedPendingReward : "notFound"} OS</p>
+      <p>Pending Reward: {pendingReward ? parsedPendingReward : "notFound"} OS</p>
     </div>
   );
 };
