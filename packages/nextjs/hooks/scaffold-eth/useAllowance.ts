@@ -4,18 +4,18 @@ import { useScaffoldERCWrite } from "./useScaffoldERCWrite";
 import { BigNumber, ethers } from "ethers";
 
 type UseAllowanceProps = {
-  tokens: { address: string; value: number; approved: boolean }[];
+  tokens: { address: string; value: BigNumber; approved: boolean }[];
   owner: string;
   spender: string;
   onAllowanceFetched: (
-    updatedTokens: { address: string; value: number; allowance: number; approved: boolean }[],
+    updatedTokens: { address: string; value: BigNumber; allowance: BigNumber; approved: boolean }[],
   ) => void;
 };
 
 type AllowanceItem = {
   address: string;
-  allowance: number;
-  value: number;
+  allowance: BigNumber;
+  value: BigNumber;
   approved: boolean;
 };
 
@@ -36,7 +36,7 @@ const useAllowance = ({ tokens, owner, spender, onAllowanceFetched }: UseAllowan
         value: token.value,
 
         //add allowance convert from bigNumber type to number avoid overflow
-        allowance: allowance ? Number(ethers.utils.formatUnits(allowance, 18)) : 0,
+        allowance: allowance ? allowance : 0,
 
         approved: allowance ? allowance.gte(tokenValueInWei) : false, // Change 'approved' type from 'any' to 'boolean'
       };

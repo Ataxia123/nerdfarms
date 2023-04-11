@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Checkbox, FormControlLabel, Grid, TextField, Typography } from "@material-ui/core";
+import { Button, Checkbox, FormControlLabel, Grid, TextField, Typography } from "@mui/material";
 import { BigNumber, ethers, utils } from "ethers";
 import { useAccount, useProvider } from "wagmi";
 import { IntegerInput } from "~~/components/scaffold-eth/Input/IntegerInput";
@@ -17,21 +17,23 @@ function AddLiquidityForm(props: any) {
   const addressZero = ethers.constants.AddressZero;
   const [showPositionOwner, setShowPositionOwner] = useState(false);
   const { tempSlice } = useAppStore();
-  const [amount0, setAmount0] = useState("");
-  const [amount1, setAmount1] = useState("");
+  const [amount0, setAmount0] = useState(0);
+  const [amount1, setAmount1] = useState(0);
   const [positionOwner, setPositionOwner] = useState("");
-  const [amount0Min, setAmount0Min] = useState("");
-  const [amount1Min, setAmount1Min] = useState("");
+  const [amount0Min, setAmount0Min] = useState(0);
+  const [amount1Min, setAmount1Min] = useState(0);
+  const [bigAmount0, setBigAmount0] = useState<BigNumber>(BigNumber.from(0));
+  const [bigAmount1, setBigAmount1] = useState<BigNumber>(BigNumber.from(0));
   const [percentageSetting, setPercentageSetting] = useState(";"); // default to 1%
   const [lastUpdatedField, setLastUpdatedField] = useState("");
-  const [currentPrice, setCurrentPrice] = useState(0);
+  const [currentPrice, setCurrentPrice] = useState<BigNumber>(BigNumber.from(0));
   // set state for bignumber
   const [approvalAmount, setApprovalAmount] = useState<BigNumber>(BigNumber.from(0));
   const [approvalAddress, setApprovalAddress] = useState("");
   // create e const for the array of token addresses, that will also contain the input value and approval state
   const [tokenAddresses, setTokenAddresses] = useState([
-    { address: "", value: 0, allowance: 0, approved: false },
-    { address: "", value: 0, allowance: 0, approved: false },
+    { address: "", value: BigNumber.from(0), allowance: BigNumber.from(0), approved: false },
+    { address: "", value: BigNumber.from(0), allowance: BigNumber.from(0), approved: false },
   ]);
   const contractName = "FarmMainRegularMinStake"; //can change name to actual name but must match contracts.
   const account = useAccount();
@@ -60,6 +62,7 @@ function AddLiquidityForm(props: any) {
   }
   // Use a type assertion to cast unipool to the UnipoolData type
   const unipoolData = unipool as UnipoolData;
+  console.log("unipoolData:", unipoolData);
   // Destructure unipoolData to get each variable
   try {
     if (unipoolData.cursorData !== null) {
@@ -76,17 +79,20 @@ function AddLiquidityForm(props: any) {
         },
       } = unipoolData;
       // Get the current price of the pool
-      const price = parseFloat(currentTickPrice);
+      const price = currentTickPrice;
+
+      console.log("priceking:", price);
       // Set the token addresses to the state using token0Address and token1Address
       if (tokenAddresses[0].address === "") {
         setTokenAddresses([
-          { address: token0Address, value: 0, allowance: 0, approved: false },
-          { address: token1Address, value: 0, allowance: 0, approved: false },
+          { address: token0Address, value: BigNumber.from(0), allowance: BigNumber.from(0), approved: false },
+          { address: token1Address, value: BigNumber.from(0), allowance: BigNumber.from(0), approved: false },
         ]);
       }
       // Set the current price to the state
-      if (currentPrice == 0) {
-        setCurrentPrice(price);
+      if (currentPrice.eq(BigNumber.from("0"))) {
+        console.log("setting Current", price, "to state");
+        setCurrentPrice(ethers.utils.parseUnits(price, 18));
       } else {
         console.log("currentPrice", currentPrice);
       }
@@ -94,36 +100,45 @@ function AddLiquidityForm(props: any) {
   } catch (e) {
     console.log("error:", e);
   }
+  const formatPrice = parseFloat(ethers.utils.formatUnits(currentPrice, 18));
   // Handles Inputs for tokens: Token A is derived from Token B
   const handleAmount0Change = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAmount0(e.target.value);
+    const inputAmount0 = parseFloat(e.target.value);
+    setAmount0(inputAmount0);
+    setBigAmount0(ethers.utils.parseUnits(e.target.value, 18));
     setLastUpdatedField("amount0");
-    if (currentPrice && !isNaN(parseFloat(e.target.value))) {
-      setAmount1((parseFloat(e.target.value) * currentPrice).toString());
+    if (currentPrice && Number(inputAmount0) > 0) {
+      setAmount1(inputAmount0 * formatPrice);
+      setBigAmount1(ethers.utils.parseUnits(amount1.toString(), 18));
     }
   };
+
   const handleAmount1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAmount1(e.target.value);
+    const inputAmount1 = parseFloat(e.target.value);
+    setAmount1(inputAmount1);
     setLastUpdatedField("amount1");
-    if (currentPrice && !isNaN(parseFloat(e.target.value))) {
-      setAmount0((parseFloat(e.target.value) / currentPrice).toString());
+    if (currentPrice && Number(inputAmount1) > 0) {
+      const bigInputAmount1 = ethers.utils.parseUnits(inputAmount1.toString(), 18);
+      setAmount0(inputAmount1 / formatPrice);
+      setBigAmount0(ethers.utils.parseUnits(amount0.toString(), 18));
     }
   };
+
   // Scaffold Contract Write takes contract and function + args (Touple) and should handle the transaction
   useEffect(() => {
     const calculateMinAmounts = () => {
-      const amount0Value = parseFloat(amount0);
-      const amount1Value = parseFloat(amount1);
+      const amount0Value = amount0;
+      const amount1Value = amount1;
       const percentage = parseFloat(percentageSetting);
-      if (isNaN(amount0Value) || isNaN(amount1Value) || isNaN(percentage)) {
+      if (isNaN(Number(amount0Value)) || isNaN(Number(amount1Value)) || isNaN(percentage)) {
         // Handle invalid input values
         return;
       }
       const amount0MinValue = amount0Value - amount0Value * percentage;
       const amount1MinValue = amount1Value - amount1Value * percentage;
       // Set the minimum amount values
-      setAmount0Min(amount0MinValue.toFixed(4));
-      setAmount1Min(amount1MinValue.toFixed(4));
+      setAmount0Min(amount0MinValue);
+      setAmount1Min(amount1MinValue);
     };
     calculateMinAmounts();
   }, [amount0, amount1, percentageSetting]);
@@ -132,9 +147,9 @@ function AddLiquidityForm(props: any) {
     if (amount0 && amount1) {
       setTokenAddresses(prev => {
         // Check if the amounts have changed before updating the state
-        if (prev[0].value !== Number(amount0) || prev[1].value !== Number(amount1)) {
-          const firstToken = { ...prev[0], value: Number(amount0) };
-          const secondToken = { ...prev[1], value: Number(amount1) };
+        if (prev[0].value !== bigAmount0 || prev[1].value !== bigAmount1) {
+          const firstToken = { ...prev[0], value: bigAmount0 };
+          const secondToken = { ...prev[1], value: bigAmount1 };
           return [firstToken, secondToken];
         } else {
           // If the amounts have not changed, return the previous state
@@ -179,11 +194,11 @@ function AddLiquidityForm(props: any) {
 
   const request: FarmingPositionRequest = {
     setupIndex: ethers.BigNumber.from(tempSlice.pid),
-    amount0: ethers.BigNumber.from(amount0),
-    amount1: ethers.BigNumber.from(amount1),
+    amount0: bigAmount0,
+    amount1: bigAmount1,
     positionOwner: positionOwner || addressZero,
-    amount0Min: BigNumber.from(amount0Min),
-    amount1Min: BigNumber.from(amount1Min),
+    amount0Min: ethers.utils.parseUnits(amount0Min.toString(), 18),
+    amount1Min: ethers.utils.parseUnits(amount1Min.toString(), 18),
   };
 
   // Wrapper hook for the openPosition function
@@ -206,7 +221,7 @@ function AddLiquidityForm(props: any) {
     });
   };
 
-  const value = involvingETH === true ? amount0 : "0";
+  const value = involvingETH === true ? bigAmount0.toString() : "0";
 
   const { writeAsync, isMining, ...otherProps } = useOpenPosition(request, value);
   const { writeAsync: addAsync } = UseAddLiquidity(request, positionId, value);
@@ -272,7 +287,7 @@ function AddLiquidityForm(props: any) {
         <div> lpTokenAddress: {addr}</div>
         <div> Setup Index: {tempSlice.pid} </div>
         <div> Position ID: {positionId} </div>
-        <div> Current Price: {currentPrice} </div>
+        <div> Current Price: {ethers.utils.formatUnits(currentPrice, 18)} </div>
         <div>
           <FormControlLabel
             control={
@@ -304,25 +319,13 @@ function AddLiquidityForm(props: any) {
         <div style={{ margin: "20px 0" }}>
           <Typography variant="subtitle1">Choose a minimum amount setting:</Typography>
           <div>
-            <Button
-              variant="contained"
-              color={percentageSetting === "0.01" ? "primary" : "default"}
-              onClick={() => setPercentageSetting("0.01")}
-            >
+            <Button variant="contained" onClick={() => setPercentageSetting("0.01")}>
               0.1%
             </Button>
-            <Button
-              variant="contained"
-              color={percentageSetting === "0.05" ? "primary" : "default"}
-              onClick={() => setPercentageSetting("0.05")}
-            >
+            <Button variant="contained" onClick={() => setPercentageSetting("0.05")}>
               1%
             </Button>
-            <Button
-              variant="contained"
-              color={percentageSetting === "0.1" ? "primary" : "default"}
-              onClick={() => setPercentageSetting("0.1")}
-            >
+            <Button variant="contained" onClick={() => setPercentageSetting("0.1")}>
               5%
             </Button>
           </div>
@@ -342,7 +345,7 @@ function AddLiquidityForm(props: any) {
           variant="outlined"
           type="number"
           value={amount0Min}
-          onChange={e => setAmount0Min(e.target.value)}
+          onChange={e => setAmount0Min(Number(e.target.value))}
           style={{ margin: "20px 0" }}
           disabled
         />
@@ -351,7 +354,7 @@ function AddLiquidityForm(props: any) {
           variant="outlined"
           type="number"
           value={amount1Min}
-          onChange={e => setAmount1Min(e.target.value)}
+          onChange={e => setAmount1Min(Number(e.target.value))}
           style={{ margin: "20px 0" }}
           disabled
         />

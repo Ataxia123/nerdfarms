@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Table } from "@material-ui/core";
+import { Button, Table } from "@mui/material";
 import { BigNumber, ethers } from "ethers";
 import { useAccount } from "wagmi";
 import { useScaffoldContractRead } from "~~/hooks/scaffold-eth";

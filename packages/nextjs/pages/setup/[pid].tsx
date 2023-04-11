@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import {
+  Button,
   Card,
+  CardActions,
   CardContent,
   CardHeader,
-  Paper,
+  Grid,
+  Link,
+  Popover,
   Table,
   TableBody,
   TableCell,
@@ -13,7 +17,7 @@ import {
   TableRow,
   Typography,
   makeStyles,
-} from "@material-ui/core";
+} from "@mui/material";
 import { BigNumber, ethers, utils } from "ethers";
 import { useAccount } from "wagmi";
 import AddLiquidityForm from "~~/components/AddLiquidityForm";
@@ -29,34 +33,6 @@ const epochToDateAndTime = (epochTime: number) => {
 
   return `${date} ${time}`;
 };
-
-const useStyles = makeStyles(theme => ({
-  card: {
-    maxWidth: 500,
-    margin: "20px auto",
-    cursor: "pointer",
-    padding: "20px",
-    backgroundColor: "#f7f7f7",
-  },
-  header: {
-    backgroundColor: "#3f51b5",
-    color: "#fff",
-    padding: "10px 20px",
-    textAlign: "center",
-  },
-  content: {
-    padding: "20px",
-  },
-  table: {
-    margin: "10px auto",
-  },
-  tableCell: {
-    padding: "10px",
-  },
-  tableHeader: {
-    fontWeight: "bold",
-  },
-}));
 
 interface SetupCardProps {
   web3: any;
@@ -93,7 +69,6 @@ type FarmingSetupResult = [FarmingSetup, FarmingSetupInfo];
 
 const SetupCard: React.FC<SetupCardProps> = ({ children }) => {
   const { address, isConnected } = useAccount();
-  const classes = useStyles();
   const router = useRouter();
   const [lptokenAddress, setLptokenAddress] = useState("");
   const [tickLower, setTickLower] = useState("0");
@@ -129,19 +104,18 @@ const SetupCard: React.FC<SetupCardProps> = ({ children }) => {
         ),
         rewardPerBlock: utils.formatEther(farmingSetup.rewardPerBlock?.toString() || "0"),
         totalSupply: utils.formatEther(farmingSetup.totalSupply?.toString() || "0"),
-        involvingEth: farmingSetupInfo.involvingETH ? "Yes" : "No",
+        involvingEth: farmingSetupInfo.involvingETH ? farmingSetupInfo.involvingETH : farmingSetupInfo.involvingETH,
         lpTokenAddress: farmingSetupInfo.liquidityPoolTokenAddress,
         MainToken: farmingSetupInfo.mainTokenAddress,
         minStakeableAmount: utils.formatEther(farmingSetupInfo.minStakeable?.toString() || "0"),
         tickLower: farmingSetupInfo.tickLower,
         tickUpper: farmingSetupInfo.tickUpper,
-        involvingETH: farmingSetupInfo.involvingETH,
       };
 
       setDisplayData(displayData);
 
       // Now you can access the properties without TypeScript errors
-      console.log(displayData);
+      console.log("DISPLAYDATA", displayData);
     } else {
       // Handle the case when the result is not of the expected type
       console.error("Unexpected result type");
@@ -216,25 +190,25 @@ const SetupCard: React.FC<SetupCardProps> = ({ children }) => {
   }, [displayData]);
 
   return (
-    <Card className={classes.card}>
-      <CardHeader className={classes.header} title="Data" />
-      <CardContent className={classes.content}>
+    <Card>
+      <CardHeader title="Data" />
+      <CardContent>
         {data && (
-          <TableContainer component={Paper}>
-            <Table className={classes.table} aria-label="simple table">
+          <TableContainer>
+            <Table aria-label="simple table">
               <TableHead>
                 <TableRow>
-                  <TableCell className={classes.tableHeader}>Variable Name</TableCell>
-                  <TableCell className={classes.tableHeader}>Value</TableCell>
+                  <TableCell>Variable Name</TableCell>
+                  <TableCell>Value</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {Object.entries(variableNames).map(([key, value]) => (
                   <TableRow key={key}>
-                    <TableCell className={classes.tableCell} component="th" scope="row">
+                    <TableCell component="th" scope="row">
                       {value}
                     </TableCell>
-                    <TableCell className={classes.tableCell}>{displayData[key]}</TableCell>
+                    <TableCell>{displayData[key]}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
