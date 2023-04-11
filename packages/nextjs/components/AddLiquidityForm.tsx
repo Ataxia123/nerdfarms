@@ -12,6 +12,7 @@ import { useScaffoldERCWrite } from "~~/hooks/scaffold-eth/useScaffoldERCWrite";
 import { useAppStore } from "~~/services/store/store";
 
 function AddLiquidityForm(props: any) {
+  const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
   const { lptokenAddress, tickLower, tickUpper, involvingETH, mainTokenAddress, positionId, liquidityPool, pool } =
     props;
   const addressZero = ethers.constants.AddressZero;
@@ -20,11 +21,11 @@ function AddLiquidityForm(props: any) {
   const [amount0, setAmount0] = useState(0);
   const [amount1, setAmount1] = useState(0);
   const [positionOwner, setPositionOwner] = useState("");
-  const [amount0Min, setAmount0Min] = useState(0);
-  const [amount1Min, setAmount1Min] = useState(0);
+  const [amount0Min, setAmount0Min] = useState<BigNumber>(BigNumber.from(0));
+  const [amount1Min, setAmount1Min] = useState<BigNumber>(BigNumber.from(0));
   const [bigAmount0, setBigAmount0] = useState<BigNumber>(BigNumber.from(0));
   const [bigAmount1, setBigAmount1] = useState<BigNumber>(BigNumber.from(0));
-  const [percentageSetting, setPercentageSetting] = useState(";"); // default to 1%
+  const [percentageSetting, setPercentageSetting] = useState("1.0"); // default to 1%
   const [lastUpdatedField, setLastUpdatedField] = useState("");
   const [currentPrice, setCurrentPrice] = useState<BigNumber>(BigNumber.from(0));
   // set state for bignumber
@@ -105,11 +106,11 @@ function AddLiquidityForm(props: any) {
   const handleAmount0Change = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputAmount0 = parseFloat(e.target.value);
     setAmount0(inputAmount0);
-    setBigAmount0(ethers.utils.parseUnits(e.target.value, 18));
+    setBigAmount0(ethers.utils.parseUnits(e.target.value));
     setLastUpdatedField("amount0");
     if (currentPrice && Number(inputAmount0) > 0) {
       setAmount1(inputAmount0 * formatPrice);
-      setBigAmount1(ethers.utils.parseUnits(amount1.toString(), 18));
+      setBigAmount1(ethers.utils.parseEther(amount1.toString()));
     }
   };
 
@@ -118,9 +119,8 @@ function AddLiquidityForm(props: any) {
     setAmount1(inputAmount1);
     setLastUpdatedField("amount1");
     if (currentPrice && Number(inputAmount1) > 0) {
-      const bigInputAmount1 = ethers.utils.parseUnits(inputAmount1.toString(), 18);
       setAmount0(inputAmount1 / formatPrice);
-      setBigAmount0(ethers.utils.parseUnits(amount0.toString(), 18));
+      setBigAmount0(ethers.utils.parseEther(amount0.toString()));
     }
   };
 
@@ -134,8 +134,8 @@ function AddLiquidityForm(props: any) {
         // Handle invalid input values
         return;
       }
-      const amount0MinValue = amount0Value - amount0Value * percentage;
-      const amount1MinValue = amount1Value - amount1Value * percentage;
+      const amount0MinValue = bigAmount0.sub(bigAmount0.mul(ethers.BigNumber.from(percentage)));
+      const amount1MinValue = bigAmount1.sub(bigAmount1.mul(ethers.BigNumber.from(percentage)));
       // Set the minimum amount values
       setAmount0Min(amount0MinValue);
       setAmount1Min(amount1MinValue);
@@ -174,7 +174,7 @@ function AddLiquidityForm(props: any) {
   }, [tokenAddresses]);
   // determine which token index (approved = false)
   const tokenIndex = useMemo(() => {
-    return tokenAddresses.findIndex(token => !token.approved);
+    return tokenAddresses.findIndex(token => !token.approved && token.address !== WETH);
   }, [tokenAddresses]);
   console.log("tokenIndex", tokenIndex);
   console.log("allowance", tokenAddresses);
@@ -197,8 +197,8 @@ function AddLiquidityForm(props: any) {
     amount0: bigAmount0,
     amount1: bigAmount1,
     positionOwner: positionOwner || addressZero,
-    amount0Min: ethers.utils.parseUnits(amount0Min.toString(), 18),
-    amount1Min: ethers.utils.parseUnits(amount1Min.toString(), 18),
+    amount0Min: ethers.utils.parseEther(amount0Min.toString()),
+    amount1Min: ethers.utils.parseEther(amount1Min.toString()),
   };
 
   // Wrapper hook for the openPosition function
@@ -237,10 +237,7 @@ function AddLiquidityForm(props: any) {
     if (tokenIndex !== -1) {
       const approvalAddress = tokenAddresses[tokenIndex]?.address ? tokenAddresses[tokenIndex].address : "0x";
       const approvalAmount = tokenAddresses[tokenIndex].value
-        ? ethers.utils.parseUnits(
-            tokenAddresses[tokenIndex].value.toString(),
-            18, // change to tokenDecimals if needed
-          )
+        ? tokenAddresses[tokenIndex].value
         : ethers.utils.parseUnits("0", 18);
       setApprovalAmount(approvalAmount);
       setApprovalAddress(approvalAddress);
@@ -322,10 +319,10 @@ function AddLiquidityForm(props: any) {
             <Button variant="contained" onClick={() => setPercentageSetting("0.01")}>
               0.1%
             </Button>
-            <Button variant="contained" onClick={() => setPercentageSetting("0.05")}>
+            <Button variant="contained" onClick={() => setPercentageSetting("0.01")}>
               1%
             </Button>
-            <Button variant="contained" onClick={() => setPercentageSetting("0.1")}>
+            <Button variant="contained" onClick={() => setPercentageSetting("0.05")}>
               5%
             </Button>
           </div>
@@ -340,24 +337,11 @@ function AddLiquidityForm(props: any) {
             style={{ margin: "20px 0" }}
           />
         )}
-        <TextField
-          label="Amount 1 Minimum"
-          variant="outlined"
-          type="number"
-          value={amount0Min}
-          onChange={e => setAmount0Min(Number(e.target.value))}
-          style={{ margin: "20px 0" }}
-          disabled
-        />
-        <TextField
-          label="Amount 1 Minimum"
-          variant="outlined"
-          type="number"
-          value={amount1Min}
-          onChange={e => setAmount1Min(Number(e.target.value))}
-          style={{ margin: "20px 0" }}
-          disabled
-        />
+        <div>
+          MinAmount0:
+          {amount0Min.toString()}
+          <div>MinAmount1:{amount1Min.toString()}</div>
+        </div>
         <div>
           <Button variant="contained" color="primary" onClick={handleClick} disabled={isMining || !isApproved}>
             {isMining ? "Loading..." : "Add Liquidity"}

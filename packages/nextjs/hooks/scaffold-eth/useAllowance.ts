@@ -30,7 +30,7 @@ const useAllowance = ({ tokens, owner, spender, onAllowanceFetched }: UseAllowan
   const fetchAllowances = useCallback(async () => {
     const allowancesPromises = tokens.map(async token => {
       const allowance = token.address === tokens[0].address ? allowance0.data : allowance1.data;
-      const tokenValueInWei = ethers.utils.parseUnits(token.value.toString(), 18);
+      const tokenValueInWei = token.value;
       return {
         address: token.address, // Change 'token' to 'address'
         value: token.value,
